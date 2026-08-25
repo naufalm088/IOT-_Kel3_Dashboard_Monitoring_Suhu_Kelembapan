@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stasiun Iklim — Monitoring DHT</title>
+  <!-- Chart.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <!-- Link ke File CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+
+    <header>
+      <div>
+        <div class="brand-eyebrow">Node-RED · Sensor DHT · Simulasi</div>
+        <h1>Stasiun Iklim Ruangan</h1>
+      </div>
+      <div class="status">
+        <div><span class="dot" id="statusDot"></span><span id="statusText">Menghubungkan…</span></div>
+        <div id="lastUpdate">Terakhir update: —</div>
+      </div>
+    </header>
+
+    <div class="readings">
+      <div class="card temp">
+        <div class="tag"><span>Suhu Udara</span><span>°C</span></div>
+        <div class="value-row">
+          <span class="value" id="tempValue">--.-</span>
+          <span class="unit">°C</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="tempBar" style="width:0%"></div></div>
+        <div class="range-labels"><span>0°</span><span>50°</span></div>
+        <div class="note" id="tempNote">Menunggu data pertama dari Node-RED…</div>
+      </div>
+
+      <div class="card humid">
+        <div class="tag"><span>Kelembaban Relatif</span><span>% RH</span></div>
+        <div class="value-row">
+          <span class="value" id="humidValue">--.-</span>
+          <span class="unit">%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="humidBar" style="width:0%"></div></div>
+        <div class="range-labels"><span>0%</span><span>100%</span></div>
+        <div class="note" id="humidNote">Menunggu data pertama dari Node-RED…</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="tag">
+        <span>Tren 5 Menit Terakhir</span>
+        <span><span class="legend-dot temp"></span>Suhu &nbsp;&nbsp;<span class="legend-dot humid"></span>Kelembaban</span>
+      </div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="footer-strip">
+      <span>Sumber: <code>GET /api/sensor</code></span>
+      <span>Polling tiap 5 detik</span>
+      <span>Prototype — Tugas IoT Dashboard</span>
+    </div>
+
+  </div>
+
+  <!-- Link ke File JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
