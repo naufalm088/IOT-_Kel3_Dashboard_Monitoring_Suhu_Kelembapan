@@ -23,7 +23,7 @@
         ],
         "repeat": "5",
         "crontab": "",
-        "once": false,
+        "once": true,
         "onceDelay": 0.1,
         "topic": "",
         "payload": "",
@@ -116,7 +116,9 @@
         "z": "138738df0e783aee",
         "name": "",
         "statusCode": "",
-        "headers": {},
+        "headers": {
+            "Access-Control-Allow-Origin": "*"
+        },
         "x": 610,
         "y": 480,
         "wires": []
