@@ -1,0 +1,124 @@
+[
+    {
+        "id": "138738df0e783aee",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "fc565ed8b519c8a1",
+        "type": "inject",
+        "z": "138738df0e783aee",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 320,
+        "wires": [
+            [
+                "46bf70c3afb447eb"
+            ]
+        ]
+    },
+    {
+        "id": "46bf70c3afb447eb",
+        "type": "function",
+        "z": "138738df0e783aee",
+        "name": "Simulasi DHT",
+        "func": "let baseTemp = 28;\nlet baseHumidity = 70;\n\nlet temperature = +(baseTemp + (Math.random() * 4 - 2)).toFixed(1);\nlet humidity = +(baseHumidity + (Math.random() * 10 - 5)).toFixed(1);\n\ntemperature = Math.max(20, Math.min(35, temperature));\nhumidity = Math.max(40, Math.min(95, humidity));\n\nmsg.payload = {\n    temperature: temperature,\n    humidity: humidity,\n    timestamp: new Date().toISOString()\n};\n\n// simpan ke global context biar bisa diakses endpoint API\nglobal.set('latestSensorData', msg.payload);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 320,
+        "wires": [
+            [
+                "6118902f95f183cd"
+            ]
+        ]
+    },
+    {
+        "id": "6118902f95f183cd",
+        "type": "debug",
+        "z": "138738df0e783aee",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "1d1415e92c7dd3fe",
+        "type": "http in",
+        "z": "138738df0e783aee",
+        "name": "",
+        "url": "/api/sensor",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 600,
+        "y": 380,
+        "wires": [
+            [
+                "2c45c12af6e1634a"
+            ]
+        ]
+    },
+    {
+        "id": "2c45c12af6e1634a",
+        "type": "function",
+        "z": "138738df0e783aee",
+        "name": "Ambil Data Terbaru",
+        "func": "msg.payload = global.get('latestSensorData') || { temperature: 0, humidity: 0, timestamp: null };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 440,
+        "wires": [
+            [
+                "b2e66bb34f8ffeed"
+            ]
+        ]
+    },
+    {
+        "id": "b2e66bb34f8ffeed",
+        "type": "http response",
+        "z": "138738df0e783aee",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 610,
+        "y": 480,
+        "wires": []
+    }
+]

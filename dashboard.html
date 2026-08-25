@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stasiun Iklim — Monitoring DHT</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#1b2420;
+    --paper:#eef1ea;
+    --paper-2:#e2e7db;
+    --line:#c7cfbd;
+    --temp:#c1502e;
+    --temp-soft:#e8d4c8;
+    --humid:#2e6f8e;
+    --humid-soft:#cfe0e6;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,600;1,500&display=swap');
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding: 20px 16px 60px;
+  }
+
+  .wrap{max-width:920px; margin:0 auto;}
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:22px;
+  }
+  .brand-eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#5b6559;
+  }
+  h1{
+    font-family:'IBM Plex Serif', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:clamp(28px,5vw,40px);
+    margin:2px 0 0;
+    letter-spacing:-0.01em;
+  }
+  .status{
+    text-align:right;
+    font-family:var(--mono);
+    font-size:12px;
+    color:#5b6559;
+  }
+  .status .dot{
+    display:inline-block;
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#3f8a52;
+    margin-right:6px;
+    box-shadow:0 0 0 0 rgba(63,138,82,.6);
+    animation:pulse 2s infinite;
+  }
+  .status .dot.off{ background:#b23c3c; animation:none; }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(63,138,82,.5);}
+    70%{box-shadow:0 0 0 8px rgba(63,138,82,0);}
+    100%{box-shadow:0 0 0 0 rgba(63,138,82,0);}
+  }
+
+  .readings{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  @media (max-width:560px){ .readings{grid-template-columns:1fr;} }
+
+  .card{
+    background:#f7f8f3;
+    border:1.5px solid var(--ink);
+    padding:20px 22px;
+    position:relative;
+    box-shadow:4px 4px 0 rgba(27,36,32,0.08);
+  }
+  .card .tag{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:#5b6559;
+    display:flex;
+    justify-content:space-between;
+  }
+  .card .value-row{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+    margin-top:10px;
+  }
+  .card .value{
+    font-family:'IBM Plex Serif', serif;
+    font-weight:600;
+    font-size:56px;
+    line-height:1;
+  }
+  .card.temp .value{ color:var(--temp); }
+  .card.humid .value{ color:var(--humid); }
+  .card .unit{
+    font-family:var(--mono);
+    font-size:18px;
+    color:#5b6559;
+  }
+  .card .bar-track{
+    margin-top:16px;
+    height:8px;
+    background:var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .card .bar-fill{
+    height:100%;
+    transition:width .6s ease;
+  }
+  .card.temp .bar-fill{ background:var(--temp); }
+  .card.humid .bar-fill{ background:var(--humid); }
+  .card .range-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--mono);
+    font-size:10px;
+    color:#8a9285;
+    margin-top:4px;
+  }
+  .card .note{
+    margin-top:14px;
+    font-size:12.5px;
+    color:#454e42;
+    border-top:1px dashed var(--line);
+    padding-top:10px;
+    min-height:34px;
+  }
+
+  .chart-card{
+    background:#f7f8f3;
+    border:1.5px solid var(--ink);
+    padding:20px 22px;
+    box-shadow:4px 4px 0 rgba(27,36,32,0.08);
+    margin-bottom:16px;
+  }
+  .chart-card .tag{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:#5b6559;
+    margin-bottom:12px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .chart-wrap{ height:240px; }
+
+  .footer-strip{
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:#5b6559;
+    border-top:1.5px solid var(--ink);
+    padding-top:12px;
+  }
+
+  .legend-dot{
+    display:inline-block;
+    width:9px;height:9px;
+    margin-right:5px;
+  }
+  .legend-dot.temp{ background:var(--temp); }
+  .legend-dot.humid{ background:var(--humid); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Node-RED · Sensor DHT · Simulasi</div>
+      <h1>Stasiun Iklim Ruangan</h1>
+    </div>
+    <div class="status">
+      <div><span class="dot" id="statusDot"></span><span id="statusText">Menghubungkan…</span></div>
+      <div id="lastUpdate">Terakhir update: —</div>
+    </div>
+  </header>
+
+  <div class="readings">
+    <div class="card temp">
+      <div class="tag"><span>Suhu Udara</span><span>°C</span></div>
+      <div class="value-row">
+        <span class="value" id="tempValue">--.-</span>
+        <span class="unit">°C</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="tempBar" style="width:0%"></div></div>
+      <div class="range-labels"><span>0°</span><span>50°</span></div>
+      <div class="note" id="tempNote">Menunggu data pertama dari Node-RED…</div>
+    </div>
+
+    <div class="card humid">
+      <div class="tag"><span>Kelembaban Relatif</span><span>% RH</span></div>
+      <div class="value-row">
+        <span class="value" id="humidValue">--.-</span>
+        <span class="unit">%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="humidBar" style="width:0%"></div></div>
+      <div class="range-labels"><span>0%</span><span>100%</span></div>
+      <div class="note" id="humidNote">Menunggu data pertama dari Node-RED…</div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="tag">
+      <span>Tren 5 Menit Terakhir</span>
+      <span><span class="legend-dot temp"></span>Suhu &nbsp;&nbsp;<span class="legend-dot humid"></span>Kelembaban</span>
+    </div>
+    <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <div class="footer-strip">
+    <span>Sumber: <code>GET /api/sensor</code></span>
+    <span>Polling tiap 5 detik</span>
+    <span>Prototype — Tugas IoT Dashboard</span>
+  </div>
+
+</div>
+
+<script>
+  const API_URL = "http://localhost:1880/api/sensor";
+  const POLL_INTERVAL_MS = 5000;
+  const MAX_POINTS = 60; // 60 x 5s = 5 minutes of history
+
+  const tempValueEl = document.getElementById('tempValue');
+  const humidValueEl = document.getElementById('humidValue');
+  const tempBarEl = document.getElementById('tempBar');
+  const humidBarEl = document.getElementById('humidBar');
+  const tempNoteEl = document.getElementById('tempNote');
+  const humidNoteEl = document.getElementById('humidNote');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const lastUpdateEl = document.getElementById('lastUpdate');
+
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'Suhu (°C)',
+          data: [],
+          borderColor: '#c1502e',
+          backgroundColor: 'rgba(193,80,46,0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Kelembaban (%)',
+          data: [],
+          borderColor: '#2e6f8e',
+          backgroundColor: 'rgba(46,111,142,0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#dde3d4' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 6 } },
+        y: {
+          position: 'left', min: 15, max: 40,
+          grid: { color: '#dde3d4' },
+          ticks: { font: { family: 'IBM Plex Mono', size: 10 } },
+          title: { display: true, text: '°C', font: { family: 'IBM Plex Mono', size: 10 } }
+        },
+        y1: {
+          position: 'right', min: 0, max: 100,
+          grid: { display: false },
+          ticks: { font: { family: 'IBM Plex Mono', size: 10 } },
+          title: { display: true, text: '%', font: { family: 'IBM Plex Mono', size: 10 } }
+        }
+      }
+    }
+  });
+
+  function tempStatusNote(t){
+    if (t < 22) return "Sedikit sejuk untuk ruangan kerja.";
+    if (t <= 28) return "Dalam rentang nyaman.";
+    if (t <= 32) return "Mulai hangat, pertimbangkan ventilasi.";
+    return "Panas — periksa sirkulasi udara.";
+  }
+  function humidStatusNote(h){
+    if (h < 40) return "Udara cenderung kering.";
+    if (h <= 60) return "Kelembaban ideal.";
+    if (h <= 75) return "Sedikit lembab, masih wajar.";
+    return "Lembab tinggi — risiko jamur/embun.";
+  }
+
+  async function fetchData(){
+    try {
+      const res = await fetch(API_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      if (data.temperature == null || data.humidity == null) {
+        throw new Error('Data belum tersedia');
+      }
+
+      tempValueEl.textContent = data.temperature.toFixed(1);
+      humidValueEl.textContent = data.humidity.toFixed(1);
+      tempBarEl.style.width = Math.min(100, (data.temperature / 50) * 100) + '%';
+      humidBarEl.style.width = Math.min(100, data.humidity) + '%';
+      tempNoteEl.textContent = tempStatusNote(data.temperature);
+      humidNoteEl.textContent = humidStatusNote(data.humidity);
+
+      statusDot.classList.remove('off');
+      statusText.textContent = 'Terhubung ke Node-RED';
+
+      const t = data.timestamp ? new Date(data.timestamp) : new Date();
+      const label = t.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      lastUpdateEl.textContent = 'Terakhir update: ' + label;
+
+      trendChart.data.labels.push(label);
+      trendChart.data.datasets[0].data.push(data.temperature);
+      trendChart.data.datasets[1].data.push(data.humidity);
+      if (trendChart.data.labels.length > MAX_POINTS) {
+        trendChart.data.labels.shift();
+        trendChart.data.datasets[0].data.shift();
+        trendChart.data.datasets[1].data.shift();
+      }
+      trendChart.update('none');
+
+    } catch (err) {
+      statusDot.classList.add('off');
+      statusText.textContent = 'Terputus — cek Node-RED';
+      console.error(err);
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, POLL_INTERVAL_MS);
+</script>
+</body>
+</html>
