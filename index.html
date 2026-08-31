@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Control — Monitoring Center</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⌂</div>
+      <div>
+        <h1>Home Control</h1>
+        <div class="subtitle">Monitoring Center — Node-RED Integration</div>
+      </div>
+    </div>
+    <div class="status-pill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Menghubungkan…</span>
+      <span class="sep">·</span>
+      <span id="lastUpdate">—</span>
+    </div>
+  </header>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="slabel">Rata-rata Suhu</div>
+      <div class="sval" id="avgTemp">--°</div>
+      <div class="ssub">5 ruangan</div>
+    </div>
+    <div class="summary-card">
+      <div class="slabel">Rata-rata Kelembaban</div>
+      <div class="sval" id="avgHumid">--%</div>
+      <div class="ssub">5 ruangan</div>
+    </div>
+    <div class="summary-card">
+      <div class="slabel">Total Daya</div>
+      <div class="sval" id="totalWatt">-- W</div>
+      <div class="ssub" id="acOnCount">0/5 AC aktif</div>
+    </div>
+    <div class="summary-card">
+      <div class="slabel">Ruangan Terpanas</div>
+      <div class="sval" id="hottestRoom">—</div>
+      <div class="ssub" id="hottestTemp">—</div>
+    </div>
+    <div class="summary-card" id="doorSummaryCard">
+      <div class="slabel">Pintu Masuk</div>
+      <div class="sval" id="doorSummary">Clear</div>
+      <div class="ssub">sensor gerakan</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="panel-block">
+      <div class="panel-title"><span>Denah Rumah</span><span class="hint">klik ruangan untuk detail</span></div>
+      <div class="rooms-grid" id="roomsGrid">
+        <div class="room-tile tamu" data-room="ruang_tamu">
+          <div class="rname">Ruang Tamu</div>
+          <div class="rtemp-row"><span class="rtemp">--°</span><span class="ac-chip off">AC OFF</span></div>
+          <div class="rwatt">-- W</div>
+        </div>
+        <div class="room-tile kamar1" data-room="kamar_1">
+          <div class="rname">Kamar 1</div>
+          <div class="rtemp-row"><span class="rtemp">--°</span><span class="ac-chip off">AC OFF</span></div>
+          <div class="rwatt">-- W</div>
+        </div>
+        <div class="room-tile kamar2" data-room="kamar_2">
+          <div class="rname">Kamar 2</div>
+          <div class="rtemp-row"><span class="rtemp">--°</span><span class="ac-chip off">AC OFF</span></div>
+          <div class="rwatt">-- W</div>
+        </div>
+        <div class="room-tile kerja" data-room="ruang_kerja">
+          <div class="rname">Ruang Kerja</div>
+          <div class="rtemp-row"><span class="rtemp">--°</span><span class="ac-chip off">AC OFF</span></div>
+          <div class="rwatt">-- W</div>
+        </div>
+        <div class="room-tile dapur" data-room="dapur">
+          <div class="rname">Dapur</div>
+          <div class="rtemp-row"><span class="rtemp">--°</span><span class="ac-chip off">AC OFF</span></div>
+          <div class="rwatt">-- W</div>
+        </div>
+      </div>
+
+      <div class="door-row">
+        <div class="dtext">
+          <div class="dlabel">Sensor Gerakan · Pintu Masuk</div>
+          <div id="doorText">Tidak ada gerakan</div>
+        </div>
+        <div class="door-badge clear" id="doorBadge">CLEAR</div>
+      </div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-title"><span>Detail Ruangan</span></div>
+      <div id="detailContent">
+        <div class="detail-empty">Pilih ruangan di denah<br>untuk melihat detail</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-heading">
+    <h2>Monitoring per Ruangan</h2>
+    <span class="hint">grafik tren suhu &amp; kelembaban, masing-masing ruangan</span>
+  </div>
+
+  <div class="room-monitor-grid" id="roomMonitorGrid"></div>
+
+  <div class="section-heading">
+    <h2>Analitik Sensor Pintu</h2>
+    <span class="hint">rekap gerakan terdeteksi</span>
+  </div>
+
+  <div class="door-analytics-grid">
+    <div class="panel-block door-stat-block">
+      <div class="panel-title"><span>Ringkasan</span></div>
+      <div class="door-stat-row">
+        <div class="door-stat">
+          <div class="dstat-label">Total Terdeteksi</div>
+          <div class="dstat-val" id="doorTotalCount">0</div>
+        </div>
+        <div class="door-stat">
+          <div class="dstat-label">Jam Tersibuk</div>
+          <div class="dstat-val" id="doorPeakHour">—</div>
+        </div>
+        <div class="door-stat">
+          <div class="dstat-label">Deteksi Terakhir</div>
+          <div class="dstat-val" id="doorLastSeen">—</div>
+        </div>
+      </div>
+      <button class="export-btn export-btn-wide" id="exportDoorBtn" disabled>Export Log Pintu — Detail per Kejadian (CSV)</button>
+      <button class="export-btn export-btn-wide" id="exportDoorHourlyBtn" disabled>Export Rekap per Jam (CSV)</button>
+    </div>
+    <div class="panel-block">
+      <div class="panel-title"><span>Distribusi Gerakan per Jam</span></div>
+      <div class="chart-wrap chart-wrap-door"><canvas id="doorHourlyChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <span>Sumber: /api/sensor · /api/history</span>
+    <span>Polling tiap 5 detik</span>
+    <span>Watt &amp; status AC tersimpan di browser</span>
+  </div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/watt.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/door-analytics.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
