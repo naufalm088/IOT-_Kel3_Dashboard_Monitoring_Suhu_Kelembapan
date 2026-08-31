@@ -85,7 +85,7 @@ function renderRoomChart(room) {
 function updateAllRoomCharts(historyArray) {
   if (!historyArray || historyArray.length === 0) return;
 
-  const validEntries = historyArray.filter(e => e.rooms && e.rooms.ruang_tamu);
+  const validEntries = historyArray.filter(e => e.rooms);
   if (validEntries.length === 0) return;
 
   const labels = validEntries.map(e => {
@@ -103,11 +103,17 @@ function updateAllRoomCharts(historyArray) {
 
     renderRoomChart(room);
 
-    // update current value display
+    const card = document.getElementById(`rmc-chart-${room}`)?.closest('.room-monitor-card');
     const last = validEntries[validEntries.length - 1];
-    if (last.rooms[room]) {
-      document.getElementById(`rmc-temp-${room}`).textContent = last.rooms[room].temperature.toFixed(1) + '°C';
-      document.getElementById(`rmc-humid-${room}`).textContent = last.rooms[room].humidity.toFixed(1) + '%';
+    const lastRoom = last.rooms[room];
+    const isOffline = !lastRoom || lastRoom.temperature == null;
+    if (card) card.classList.toggle('offline', isOffline && room === 'ruang_tamu');
+    if (lastRoom && !isOffline) {
+      document.getElementById(`rmc-temp-${room}`).textContent = lastRoom.temperature.toFixed(1) + '°C';
+      document.getElementById(`rmc-humid-${room}`).textContent = lastRoom.humidity.toFixed(1) + '%';
+    } else if (isOffline) {
+      document.getElementById(`rmc-temp-${room}`).textContent = '--°C';
+      document.getElementById(`rmc-humid-${room}`).textContent = '--%';
     }
   });
 }

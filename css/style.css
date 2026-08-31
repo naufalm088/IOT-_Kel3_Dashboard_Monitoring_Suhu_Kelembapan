@@ -253,6 +253,18 @@ h1{font-size:21px; font-weight:700; margin:0; letter-spacing:-0.02em;}
 .export-btn:disabled{opacity:.35; cursor:not-allowed;}
 .export-btn:disabled:hover{border-color:var(--border); color:var(--text);}
 
+.sensor-alert{display:none; background:var(--danger-soft); border:1px solid rgba(239,107,98,0.35); color:var(--danger); padding:12px 16px; border-radius:var(--radius-md); font-family:var(--mono); font-size:12px; margin-bottom:16px;}
+.sensor-alert.show{display:block;}
+
+.room-tile.offline{border-color:rgba(239,107,98,0.45); background:var(--danger-soft);}
+.room-tile.offline .rname{color:var(--danger);}
+.rtemp.offline{color:var(--text-faint) !important;}
+.room-tile.offline .rwatt{color:var(--danger);}
+.offline-badge{font-family:var(--mono); font-size:8px; padding:2px 6px; border-radius:100px; background:var(--danger-soft); color:var(--danger); border:1px solid rgba(239,107,98,0.3); margin-left:6px; vertical-align:middle;}
+.metric-box.offline{border-color:rgba(239,107,98,0.3); background:var(--danger-soft);}
+.metric-box.offline .mval{color:var(--text-faint);}
+.room-monitor-card.offline{border-color:rgba(239,107,98,0.35);}
+
 .footer-note{
   margin-top:28px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
   font-family:var(--mono); font-size:11px; color:var(--text-faint);

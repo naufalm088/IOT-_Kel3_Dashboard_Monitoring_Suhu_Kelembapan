@@ -86,11 +86,14 @@ void loop() {
     float temperature = dht.readTemperature(); // Celsius
     float humidity    = dht.readHumidity();
 
-    // Validasi bacaan
+    // Validasi bacaan — publish offline jika gagal agar dashboard warning
     if (isnan(temperature) || isnan(humidity)) {
-      Serial.println("[DHT11] Gagal membaca sensor! Cek wiring.");
+      Serial.println("[DHT11] Gagal membaca sensor! Cek wiring. -> publish offline");
+      client.publish("smarthome/ruang_tamu/status", "offline", true);
       return;
     }
+    // DHT11 terbaca -> pastikan status online
+    client.publish("smarthome/ruang_tamu/status", "online", true);
 
     // Buat JSON payload
     char payload[80];

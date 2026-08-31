@@ -3,7 +3,8 @@ const CONFIG = {
   HISTORY_URL: "http://localhost:1880/api/history",
   POLL_INTERVAL_MS: 5000,
   HISTORY_POLL_MS: 15000,
-  MAX_WATT_POINTS: 40
+  MAX_WATT_POINTS: 40,
+  OFFLINE_TIMEOUT_MS: 15000
 };
 
 const ROOM_LABELS = {
