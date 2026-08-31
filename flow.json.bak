@@ -1,0 +1,146 @@
+[
+    {
+        "id": "flow_simulasi",
+        "type": "tab",
+        "label": "Smart Home - Simulasi",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "node_inject",
+        "type": "inject",
+        "z": "flow_simulasi",
+        "name": "Trigger tiap 5 detik",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 100,
+        "wires": [
+            [
+                "node_simulasi"
+            ]
+        ]
+    },
+    {
+        "id": "node_simulasi",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Simulasi 5 Ruangan",
+        "func": "const rooms = [\"ruang_tamu\", \"kamar_1\", \"kamar_2\", \"ruang_kerja\", \"dapur\"];\n\nlet previous = global.get('smartHomeData') || {};\n\nlet data = { rooms: {}, pintu_masuk: {}, timestamp: new Date().toISOString() };\n\nrooms.forEach(room => {\n    let baseTemp = 27;\n    let baseHumidity = 65;\n\n    let temperature = +(baseTemp + (Math.random() * 4 - 2)).toFixed(1);\n    let humidity = +(baseHumidity + (Math.random() * 10 - 5)).toFixed(1);\n\n    temperature = Math.max(20, Math.min(35, temperature));\n    humidity = Math.max(40, Math.min(95, humidity));\n\n    data.rooms[room] = {\n        temperature: temperature,\n        humidity: humidity,\n        ac_status: (previous.rooms && previous.rooms[room]) ? previous.rooms[room].ac_status : false\n    };\n});\n\ndata.pintu_masuk = {\n    motion_detected: Math.random() < 0.2\n};\n\nmsg.payload = data;\nglobal.set('smartHomeData', data);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 100,
+        "wires": [
+            [
+                "node_debug",
+                "node_baca_file_lama"
+            ]
+        ]
+    },
+    {
+        "id": "node_debug",
+        "type": "debug",
+        "z": "flow_simulasi",
+        "name": "Cek Data Simulasi",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "node_baca_file_lama",
+        "type": "file in",
+        "z": "flow_simulasi",
+        "name": "Baca Histori Lama",
+        "filename": "C:\\Users\\Naufal Mirza Aldilla\\.node-red\\smarthome_history.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 700,
+        "y": 140,
+        "wires": [
+            [
+                "node_gabung_histori"
+            ]
+        ]
+    },
+    {
+        "id": "node_gabung_histori",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Gabungkan & Batasi 200",
+        "func": "// GANTI kode Function Node \"Gabungkan & Batasi 200\" dengan ini\n// Sekarang menyimpan histori SEMUA ruangan, bukan cuma dapur\n\nlet fileContent = (typeof msg.payload === 'string') ? msg.payload : '';\nlet dataBaru = global.get('smartHomeData');\n\nlet history = [];\ntry {\n    if (fileContent && fileContent.trim().length > 0) {\n        history = JSON.parse(fileContent);\n    }\n} catch (e) {\n    node.warn('File histori lama tidak valid, mulai dari kosong.');\n    history = [];\n}\n\nif (!Array.isArray(history)) {\n    history = [];\n}\n\n// simpan snapshot suhu & kelembaban SEMUA ruangan, plus status pintu\nhistory.push({\n    timestamp: dataBaru.timestamp,\n    motion_detected: dataBaru.pintu_masuk.motion_detected,\n    rooms: {\n        ruang_tamu: {\n            temperature: dataBaru.rooms.ruang_tamu.temperature,\n            humidity: dataBaru.rooms.ruang_tamu.humidity\n        },\n        kamar_1: {\n            temperature: dataBaru.rooms.kamar_1.temperature,\n            humidity: dataBaru.rooms.kamar_1.humidity\n        },\n        kamar_2: {\n            temperature: dataBaru.rooms.kamar_2.temperature,\n            humidity: dataBaru.rooms.kamar_2.humidity\n        },\n        ruang_kerja: {\n            temperature: dataBaru.rooms.ruang_kerja.temperature,\n            humidity: dataBaru.rooms.ruang_kerja.humidity\n        },\n        dapur: {\n            temperature: dataBaru.rooms.dapur.temperature,\n            humidity: dataBaru.rooms.dapur.humidity\n        }\n    }\n});\n\nif (history.length > 200) {\n    history = history.slice(history.length - 200);\n}\n\nmsg.payload = JSON.stringify(history, null, 2);\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 220,
+        "wires": [
+            [
+                "node_tulis_file"
+            ]
+        ]
+    },
+    {
+        "id": "node_tulis_file",
+        "type": "file",
+        "z": "flow_simulasi",
+        "name": "Simpan Histori",
+        "filename": "C:\\Users\\Naufal Mirza Aldilla\\.node-red\\smarthome_history.json",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 940,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "92ef85df38de7a98",
+        "type": "catch",
+        "z": "flow_simulasi",
+        "name": "",
+        "scope": [
+            "node_baca_file_lama"
+        ],
+        "uncaught": false,
+        "x": 410,
+        "y": 180,
+        "wires": [
+            [
+                "node_gabung_histori"
+            ]
+        ]
+    }
+]

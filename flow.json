@@ -1,0 +1,316 @@
+[
+    {
+        "id": "flow_simulasi",
+        "type": "tab",
+        "label": "Smart Home - Hybrid",
+        "disabled": false,
+        "info": "Ruang Tamu = DHT11 real via MQTT, 4 ruangan lain simulasi"
+    },
+
+    {
+        "id": "node_inject",
+        "type": "inject",
+        "z": "flow_simulasi",
+        "name": "Trigger tiap 5 detik",
+        "props": [{"p": "payload"}],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 100,
+        "wires": [["node_simulasi"]]
+    },
+
+    {
+        "id": "node_simulasi",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Simulasi 4 Ruangan + Pintu",
+        "func": "const simRooms = [\"kamar_1\", \"kamar_2\", \"ruang_kerja\", \"dapur\"];\nlet previous = global.get('smartHomeData') || {};\n\n// Cek apakah ada data MQTT real untuk ruang_tamu\nlet mqttData = global.get('smartHomeDataMQTT');\nlet mqttFresh = mqttData && mqttData.timestamp &&\n    (Date.now() - new Date(mqttData.timestamp).getTime()) < 10000;\n\nlet data = { rooms: {}, pintu_masuk: {}, timestamp: new Date().toISOString() };\n\n// Ruang Tamu: real dari DHT11 jika ada, fallback simulasi\nif (mqttFresh) {\n    data.rooms.ruang_tamu = {\n        temperature: mqttData.rooms.ruang_tamu.temperature,\n        humidity: mqttData.rooms.ruang_tamu.humidity,\n        ac_status: (previous.rooms && previous.rooms.ruang_tamu)\n            ? previous.rooms.ruang_tamu.ac_status : false\n    };\n} else {\n    let t = +(27 + (Math.random() * 4 - 2)).toFixed(1);\n    let h = +(65 + (Math.random() * 10 - 5)).toFixed(1);\n    data.rooms.ruang_tamu = {\n        temperature: Math.max(20, Math.min(35, t)),\n        humidity: Math.max(40, Math.min(95, h)),\n        ac_status: (previous.rooms && previous.rooms.ruang_tamu)\n            ? previous.rooms.ruang_tamu.ac_status : false\n    };\n}\n\n// 4 ruangan lain: simulasi random\nsimRooms.forEach(room => {\n    let t = +(27 + (Math.random() * 4 - 2)).toFixed(1);\n    let h = +(65 + (Math.random() * 10 - 5)).toFixed(1);\n    data.rooms[room] = {\n        temperature: Math.max(20, Math.min(35, t)),\n        humidity: Math.max(40, Math.min(95, h)),\n        ac_status: (previous.rooms && previous.rooms[room])\n            ? previous.rooms[room].ac_status : false\n    };\n});\n\ndata.pintu_masuk = { motion_detected: Math.random() < 0.2 };\n\nmsg.payload = data;\nglobal.set('smartHomeData', data);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 100,
+        "wires": [["node_debug", "node_baca_file_lama"]]
+    },
+
+    {
+        "id": "node_debug",
+        "type": "debug",
+        "z": "flow_simulasi",
+        "name": "Cek Data Simulasi",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 60,
+        "wires": []
+    },
+
+    {
+        "id": "node_baca_file_lama",
+        "type": "file in",
+        "z": "flow_simulasi",
+        "name": "Baca Histori Lama",
+        "filename": "smarthome_history.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 700,
+        "y": 140,
+        "wires": [["node_gabung_histori"]]
+    },
+
+    {
+        "id": "node_gabung_histori",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Gabungkan & Batasi 200",
+        "func": "let fileContent = (typeof msg.payload === 'string') ? msg.payload : '';\nlet dataBaru = global.get('smartHomeData');\n\nlet history = [];\ntry {\n    if (fileContent && fileContent.trim().length > 0) {\n        history = JSON.parse(fileContent);\n    }\n} catch (e) {\n    node.warn('File histori tidak valid, mulai dari kosong.');\n    history = [];\n}\n\nif (!Array.isArray(history)) { history = []; }\n\nhistory.push({\n    timestamp: dataBaru.timestamp,\n    motion_detected: dataBaru.pintu_masuk.motion_detected,\n    rooms: {\n        ruang_tamu: {\n            temperature: dataBaru.rooms.ruang_tamu.temperature,\n            humidity: dataBaru.rooms.ruang_tamu.humidity\n        },\n        kamar_1: {\n            temperature: dataBaru.rooms.kamar_1.temperature,\n            humidity: dataBaru.rooms.kamar_1.humidity\n        },\n        kamar_2: {\n            temperature: dataBaru.rooms.kamar_2.temperature,\n            humidity: dataBaru.rooms.kamar_2.humidity\n        },\n        ruang_kerja: {\n            temperature: dataBaru.rooms.ruang_kerja.temperature,\n            humidity: dataBaru.rooms.ruang_kerja.humidity\n        },\n        dapur: {\n            temperature: dataBaru.rooms.dapur.temperature,\n            humidity: dataBaru.rooms.dapur.humidity\n        }\n    }\n});\n\nif (history.length > 200) {\n    history = history.slice(history.length - 200);\n}\n\nmsg.payload = JSON.stringify(history, null, 2);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 220,
+        "wires": [["node_tulis_file"]]
+    },
+
+    {
+        "id": "node_tulis_file",
+        "type": "file",
+        "z": "flow_simulasi",
+        "name": "Simpan Histori",
+        "filename": "smarthome_history.json",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 940,
+        "y": 220,
+        "wires": [[]]
+    },
+
+    {
+        "id": "catch_node_baca",
+        "type": "catch",
+        "z": "flow_simulasi",
+        "name": "",
+        "scope": ["node_baca_file_lama"],
+        "uncaught": false,
+        "x": 410,
+        "y": 180,
+        "wires": [["node_gabung_histori"]]
+    },
+
+    {
+        "id": "node_broker_mqtt",
+        "type": "mqtt-broker",
+        "z": "flow_simulasi",
+        "name": "Local Mosquitto",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    },
+
+    {
+        "id": "node_mqtt_in",
+        "type": "mqtt in",
+        "z": "flow_simulasi",
+        "name": "DHT11 Ruang Tamu",
+        "topic": "smarthome/ruang_tamu/dht11",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "node_broker_mqtt",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 200,
+        "y": 350,
+        "wires": [["node_mqtt_saver"]]
+    },
+
+    {
+        "id": "node_mqtt_saver",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Simpan Data MQTT ke Global",
+        "func": "let dhtData = msg.payload;\n\nlet current = global.get('smartHomeData') || { rooms: {} };\n\ncurrent.rooms.ruang_tamu = {\n    temperature: dhtData.temperature,\n    humidity: dhtData.humidity,\n    ac_status: (current.rooms.ruang_tamu) ? current.rooms.ruang_tamu.ac_status : false\n};\n\nglobal.set('smartHomeDataMQTT', {\n    rooms: { ruang_tamu: { temperature: dhtData.temperature, humidity: dhtData.humidity } },\n    timestamp: new Date().toISOString()\n});\n\nglobal.set('smartHomeData', current);\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 350,
+        "wires": [[]]
+    },
+
+    {
+        "id": "node_http_in_sensor",
+        "type": "http in",
+        "z": "flow_simulasi",
+        "name": "GET /api/sensor",
+        "url": "/api/sensor",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 440,
+        "wires": [["node_return_sensor"]]
+    },
+
+    {
+        "id": "node_return_sensor",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Return Sensor Data",
+        "func": "let data = global.get('smartHomeData');\nif (!data) {\n    msg.payload = { error: 'Data belum tersedia' };\n} else {\n    msg.payload = data;\n}\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 440,
+        "wires": [["node_http_out_sensor"]]
+    },
+
+    {
+        "id": "node_http_out_sensor",
+        "type": "http response",
+        "z": "flow_simulasi",
+        "name": "HTTP Response Sensor",
+        "statusCode": "200",
+        "headers": {},
+        "x": 680,
+        "y": 440,
+        "wires": []
+    },
+
+    {
+        "id": "node_http_in_history",
+        "type": "http in",
+        "z": "flow_simulasi",
+        "name": "GET /api/history",
+        "url": "/api/history",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 500,
+        "wires": [["node_read_history"]]
+    },
+
+    {
+        "id": "node_read_history",
+        "type": "file in",
+        "z": "flow_simulasi",
+        "name": "Baca Histori",
+        "filename": "smarthome_history.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": true,
+        "encoding": "none",
+        "allProps": false,
+        "x": 400,
+        "y": 500,
+        "wires": [["node_return_history"]]
+    },
+
+    {
+        "id": "node_return_history",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Parse & Return Histori",
+        "func": "let fileContent = (typeof msg.payload === 'string') ? msg.payload : '';\nlet history = [];\ntry {\n    if (fileContent && fileContent.trim().length > 0) {\n        history = JSON.parse(fileContent);\n    }\n} catch (e) {\n    history = [];\n}\nif (!Array.isArray(history)) { history = []; }\nmsg.payload = history;\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 500,
+        "wires": [["node_http_out_history"]]
+    },
+
+    {
+        "id": "node_http_out_history",
+        "type": "http response",
+        "z": "flow_simulasi",
+        "name": "HTTP Response History",
+        "statusCode": "200",
+        "headers": {},
+        "x": 890,
+        "y": 500,
+        "wires": []
+    },
+
+    {
+        "id": "catch_history_read",
+        "type": "catch",
+        "z": "flow_simulasi",
+        "name": "",
+        "scope": ["node_read_history"],
+        "uncaught": false,
+        "x": 200,
+        "y": 560,
+        "wires": [["node_return_empty_history"]]
+    },
+
+    {
+        "id": "node_return_empty_history",
+        "type": "function",
+        "z": "flow_simulasi",
+        "name": "Return Empty Array",
+        "func": "msg.payload = [];\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 560,
+        "wires": [["node_http_out_history"]]
+    }
+]
