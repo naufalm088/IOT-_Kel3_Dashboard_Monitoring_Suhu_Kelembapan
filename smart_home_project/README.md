@@ -1,5 +1,9 @@
 # Smart Home IoT Project
 
+link mosquitto : https://mosquitto.org/download/
+install node-red : npm install -g --unsafe-perm node-red
+http://localhost:1880
+
 Dashboard Monitoring Suhu & Kelembapan — Node-RED + ESP32 + DHT11
 
 ## Arsitektur
@@ -17,6 +21,7 @@ Dashboard Monitoring Suhu & Kelembapan — Node-RED + ESP32 + DHT11
 ```
 
 ### Mode Hybrid
+
 - **Ruang Tamu**: Data real dari DHT11 via MQTT
 - **4 Ruangan Lain**: Simulasi random (kamar_1, kamar_2, ruang_kerja, dapur)
 - **Pintu Masuk**: Simulasi motion 20%
@@ -26,6 +31,7 @@ Dashboard Monitoring Suhu & Kelembapan — Node-RED + ESP32 + DHT11
 ## Quick Start
 
 ### 1. Install Mosquitto MQTT Broker
+
 ```bash
 # Windows: download dari https://mosquitto.org/download/
 # Install dengan centang "Install as service"
@@ -35,12 +41,14 @@ Dashboard Monitoring Suhu & Kelembapan — Node-RED + ESP32 + DHT11
 ```
 
 ### 2. Upload Sketch ke ESP32
+
 - Buka `hardware/esp32_dht11_mqtt/esp32_dht11_mqtt.ino` di Arduino IDE
 - Install library: DHT by Adafruit + PubSubClient
 - Upload ke ESP32 (COM7, 115200 baud)
 - Pastikan Serial Monitor menunjukkan data ter-publish
 
 ### 3. Import Flow ke Node-RED
+
 ```bash
 # Buka Node-RED: http://localhost:1880
 # Menu > Import > Upload flow.json (dari folder smart_home_project/)
@@ -48,6 +56,7 @@ Dashboard Monitoring Suhu & Kelembapan — Node-RED + ESP32 + DHT11
 ```
 
 ### 4. Buka Dashboard
+
 ```
 # Buka index.html di browser (atau serve via Node-RED static)
 # Pastikan ESP32 sudah terhubung WiFi & MQTT
@@ -77,10 +86,10 @@ flow.json.bak                     # Backup flow original (sebelum hybrid)
 
 ## API Endpoints (Node-RED)
 
-| Endpoint | Method | Response |
-|----------|--------|----------|
-| `/api/sensor` | GET | `{rooms: {ruang_tamu: {temp, humid, ac}, ...}, pintu_masuk: {motion}, timestamp}` |
-| `/api/history` | GET | `[{timestamp, motion_detected, rooms: {...}}, ...]` (max 200) |
+| Endpoint       | Method | Response                                                                          |
+| -------------- | ------ | --------------------------------------------------------------------------------- |
+| `/api/sensor`  | GET    | `{rooms: {ruang_tamu: {temp, humid, ac}, ...}, pintu_masuk: {motion}, timestamp}` |
+| `/api/history` | GET    | `[{timestamp, motion_detected, rooms: {...}}, ...]` (max 200)                     |
 
 ## Branch
 
